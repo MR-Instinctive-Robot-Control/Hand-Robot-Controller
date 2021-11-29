@@ -4,7 +4,7 @@ import copy
 import rospy
 import threading
 import numpy as np
-import interbotix_hand_joy.srv._GripperPosition
+from interbotix_hand_joy.srv import GripperPosition
 from geometry_msgs.msg import Pose
 from interbotix_common_modules import angle_manipulation as ang
 from interbotix_xs_modules.arm import InterbotixManipulatorXS
@@ -34,7 +34,7 @@ class ArmRobot(object):
         self.T_yb = np.identity(4)
         self.update_T_yb()
         rospy.Subscriber("commands/hand_pose", Pose, self.hand_pose_cb)
-        s = rospy.Service('commands/gripper_position', interbotix_hand_joy.srv._GripperPosition, self.handle_gripper_position)
+        s = rospy.Service('commands/gripper_position', GripperPosition, self.handle_gripper_position)
     
 
     ### @brief Helper function that updates the frequency at which the main control loop runs
