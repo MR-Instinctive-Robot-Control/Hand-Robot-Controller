@@ -10,8 +10,8 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   interbotix_xsarm_control
   rospy
-  sensor_msgs
   std_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -20,6 +20,10 @@ find_package(catkin REQUIRED COMPONENTS
 ################################################
 ## Declare ROS messages, services and actions ##
 ################################################
+
+add_service_files(FILES
+  GripperPosition.srv
+)
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
@@ -33,7 +37,7 @@ generate_messages(
 ## The catkin_package macro generates cmake config files for your package
 ## Declare things to be passed to dependent projects
 catkin_package(
- CATKIN_DEPENDS interbotix_xsarm_control rospy sensor_msgs std_msgs
+ CATKIN_DEPENDS interbotix_xsarm_control rospy sensor_msgs std_msgs message_runtime
 )
 
 ###########

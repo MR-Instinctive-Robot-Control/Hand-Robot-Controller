@@ -4,6 +4,7 @@ import copy
 import rospy
 import threading
 import numpy as np
+import interbotix_hand_joy.srv._GripperPosition
 from geometry_msgs.msg import Pose
 from interbotix_common_modules import angle_manipulation as ang
 from interbotix_xs_modules.arm import InterbotixManipulatorXS
@@ -33,6 +34,8 @@ class ArmRobot(object):
         self.T_yb = np.identity(4)
         self.update_T_yb()
         rospy.Subscriber("commands/hand_pose", Pose, self.hand_pose_cb)
+        s = rospy.Service('commands/gripper_position', interbotix_hand_joy.srv._GripperPosition, self.handle_gripper_position)
+    
 
     ### @brief Helper function that updates the frequency at which the main control loop runs
     ### @param loop_rate - desired loop frequency [Hz]
@@ -54,6 +57,16 @@ class ArmRobot(object):
         self.current_gripper_pressure = gripper_pressure
         self.armbot.gripper.set_pressure(self.current_gripper_pressure)
         rospy.loginfo("Gripper pressure is at %.2f%%." % (self.current_gripper_pressure * 100.0))
+
+    ### @brief Helper function that opens or closes the gripper
+    ### @param req - Service request
+    def handle_gripper_position(self, req):
+        if (req.gripper_cmd == 1):
+            self.armbot.gripper.open(delay=0)
+            return 1 # Opening
+        elif (req.gripper_cmd == 0):
+            self.armbot.gripper.close(delay=0)
+            return 2 # Closing
 
     ### @brief ROS Callback function that recieves ArmJoy messages
     ### @param msg - ArmJoy ROS message
