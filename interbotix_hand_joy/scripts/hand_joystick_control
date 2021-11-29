@@ -7,14 +7,21 @@ import numpy as np
 import interbotix_hand_joy.srv._GripperPosition
 from geometry_msgs.msg import Pose
 from interbotix_common_modules import angle_manipulation as ang
+from interbotix_common_modules import geometry as geom_help
 from interbotix_xs_modules.arm import InterbotixManipulatorXS
+from scipy.spatial.transform import Rotation as R
 
 class ArmRobot(object):
     def __init__(self):
         self.waist_step = 0.06
-        self.rotate_step = 0.04
-        self.translate_step = 0.007
+        # tuning parameters
+        self.rotate_p = 0.25
+        self.translate_p = 0.1
+        self.rotate_step = 0.01
+        self.translate_step = 0.07
         self.translate_threshold = 0.014
+        self.rotate_threshold = 0.02
+
         self.gripper_pressure_step = 0.125
         self.current_loop_rate = 25
         self.current_torque_status = True
@@ -112,6 +119,17 @@ class ArmRobot(object):
         #     self.armbot.dxl.robot_torque_enable("group", "arm", False)
         #     self.current_torque_status = False
 
+    def calculate_translate_step(self, error):
+        step_size = min(self.translate_step, abs(error) * self.translate_p)
+        step = step_size*np.sign(error)
+        return step
+
+    def calculate_rotate_step(self, error):
+        step_size = min(self.rotate_step, abs(error) * self.rotate_p)
+        step = step_size*np.sign(error)
+        return step
+
+
     ### @brief Main control loop to manipulate the arm
     def controller(self):
 
@@ -154,42 +172,50 @@ class ArmRobot(object):
         #custom: check if pose incremeted more than threshold in x, y, or z
 
         #-1, 0, 1
-        inc_x = np.sign(msg.position.x)*(abs(msg.position.x) > self.translate_threshold)
-        inc_y = np.sign(msg.position.y)*(abs(msg.position.y) > self.translate_threshold)
-        inc_z = np.sign(msg.position.z)*(abs(msg.position.z) > self.translate_threshold)
+        inc_x = (abs(msg.position.x) > self.translate_threshold)
+        inc_y = (abs(msg.position.y) > self.translate_threshold)
+        inc_z = (abs(msg.position.z) > self.translate_threshold)
 
         # Copy the most recent T_yb transform into a temporary variable
         T_yb = np.array(self.T_yb)
 
         # check ee_x_cmd
         if (inc_x):
-            T_yb[0, 3] += inc_x * self.translate_step
+            T_yb[0, 3] += self.calculate_translate_step(msg.position.x)
 
         # check ee_y_cmd
         if (inc_y):
-            T_yb[1, 3] += inc_y * self.translate_step
+            T_yb[1, 3] += self.calculate_translate_step(msg.position.y)
 
         # check ee_z_cmd
         if (inc_z):
-            T_yb[2, 3] += inc_z * self.translate_step
+            T_yb[2, 3] += self.calculate_translate_step(msg.position.z)
 
-        # # check end-effector orientation related commands
-        # if (orientation_changed != 0):
-        #     rpy = ang.rotationMatrixToEulerAngles(T_yb[:3, :3])
+        # transform incoming pose orientation to roll pitch yaw
+        q = msg.orientation
+        if geom_help.quaternion_is_valid(q):
+            rospy.loginfo("attempting rotation")
+            rot = R.from_quat([q.x, q.y, q.z, q.w])
+            rpy_cmd = ang.rotationMatrixToEulerAngles(rot.as_dcm())
+            rpy = ang.rotationMatrixToEulerAngles(T_yb[:3, :3])
 
-        #     # check ee_roll_cmd
-        #     if (msg.ee_roll_cmd == ArmJoy.EE_ROLL_CCW):
-        #         rpy[0] += self.rotate_step
-        #     elif (msg.ee_roll_cmd == ArmJoy.EE_ROLL_CW):
-        #         rpy[0] -= self.rotate_step
+            #-1, 0, 1
+            inc_roll = (abs(rpy_cmd[0]) > self.rotate_threshold)
+            inc_pitch = (abs(rpy_cmd[0]) > self.rotate_threshold)
+            inc_yaw = (abs(rpy_cmd[0]) > self.rotate_threshold)
 
-        #     # check ee_pitch_cmd
-        #     if (msg.ee_pitch_cmd == ArmJoy.EE_PITCH_DOWN):
-        #         rpy[1] += self.rotate_step
-        #     elif (msg.ee_pitch_cmd == ArmJoy.EE_PITCH_UP):
-        #         rpy[1] -= self.rotate_step
+            if (inc_roll):
+                rpy[0] += self.calculate_rotate_step(rpy_cmd[0])
 
-            # T_yb[:3,:3] = ang.eulerAnglesToRotationMatrix(rpy)
+            # check ee_y_cmd
+            if (inc_pitch):
+                rpy[1] += self.calculate_rotate_step(rpy_cmd[1])
+
+            # check ee_z_cmd
+            if (inc_yaw):
+                rpy[2] += self.calculate_rotate_step(rpy_cmd[2])
+
+            T_yb[:3,:3] = ang.eulerAnglesToRotationMatrix(rpy)
 
         # Get desired transformation matrix of the end-effector w.r.t. the base frame
         T_sd = np.dot(self.T_sy, T_yb)
