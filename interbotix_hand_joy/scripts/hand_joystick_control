@@ -4,7 +4,7 @@ import copy
 import rospy
 import threading
 import numpy as np
-from interbotix_hand_joy.srv import GripperPosition
+from interbotix_hand_joy.srv import GripperPosition, GripperPositionResponse
 from geometry_msgs.msg import Pose
 from interbotix_common_modules import angle_manipulation as ang
 from interbotix_xs_modules.arm import InterbotixManipulatorXS
@@ -63,10 +63,10 @@ class ArmRobot(object):
     def handle_gripper_position(self, req):
         if (req.gripper_cmd == 1):
             self.armbot.gripper.open(delay=0)
-            return 1 # Opening
+            return GripperPositionResponse(1) # Opening
         elif (req.gripper_cmd == 0):
             self.armbot.gripper.close(delay=0)
-            return 2 # Closing
+            return GripperPositionResponse(2) # Closing
 
     ### @brief ROS Callback function that recieves ArmJoy messages
     ### @param msg - ArmJoy ROS message
