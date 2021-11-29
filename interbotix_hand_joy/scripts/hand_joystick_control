@@ -68,12 +68,19 @@ class ArmRobot(object):
     ### @brief Helper function that opens or closes the gripper
     ### @param req - Service request
     def handle_gripper_position(self, req):
+        response = GripperPositionResponse()
         if (req.gripper_cmd == 1):
+            rospy.loginfo("opening")
             self.armbot.gripper.open(delay=0)
-            return GripperPositionResponse(1) # Opening
+            response.mode_of_operation = 1
+            return response # Opening
         elif (req.gripper_cmd == 0):
+            rospy.loginfo("closing")
             self.armbot.gripper.close(delay=0)
-            return GripperPositionResponse(2) # Closing
+            response.mode_of_operation = 2
+            return response # Closing
+        response.mode_of_operation(0)
+        return response 
 
     ### @brief ROS Callback function that recieves ArmJoy messages
     ### @param msg - ArmJoy ROS message
