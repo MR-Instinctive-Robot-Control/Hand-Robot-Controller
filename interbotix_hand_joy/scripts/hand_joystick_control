@@ -6,6 +6,7 @@ import threading
 import numpy as np
 from interbotix_hand_joy.srv import GripperPosition, GripperPositionResponse
 from geometry_msgs.msg import Pose
+from std_srvs.srv import Trigger, TriggerResponse, SetBool, SetBoolResponse
 from interbotix_common_modules import angle_manipulation as ang
 from interbotix_common_modules import geometry as geom_help
 from interbotix_xs_modules.arm import InterbotixManipulatorXS
@@ -40,8 +41,13 @@ class ArmRobot(object):
         self.T_sy = np.identity(4)
         self.T_yb = np.identity(4)
         self.update_T_yb()
+        # initialize operation
+        self.enable_smooth_follow = False
         rospy.Subscriber("commands/hand_pose", Pose, self.hand_pose_cb)
-        s = rospy.Service('commands/gripper_position', GripperPosition, self.handle_gripper_position)
+        rospy.Service('commands/gripper_position', GripperPosition, self.handle_gripper_position)
+        rospy.Service('commands/go_home', Trigger, self.handle_go_home)
+        rospy.Service('commands/go_sleep', Trigger, self.handle_sleep)
+        rospy.Service('commands/toggle_hand_follow', SetBool, self.handle_toggle_hand_follow)
     
 
     ### @brief Helper function that updates the frequency at which the main control loop runs
@@ -81,6 +87,26 @@ class ArmRobot(object):
             return response # Closing
         response.mode_of_operation(0)
         return response 
+
+    # handles service call, returns true once the arm is in sleep position
+    def handle_sleep(self, req):
+        self.armbot.arm.go_to_sleep_pose(1.5, 0.75)
+        self.update_T_yb()
+        self.armbot.arm.set_trajectory_time(0.2, 0.1)
+        return TriggerResponse(success=True) 
+
+    # handles service call, returns true once the arm is in home position
+    def handle_go_home(self, req):
+        self.armbot.arm.go_to_home_pose(1.5, 0.75)
+        self.update_T_yb()
+        self.armbot.arm.set_trajectory_time(0.2, 0.1)
+        return TriggerResponse(success=True)  
+
+    # handles service call, sets the bool that enables hand following and return whatever the bool is set to
+    def handle_toggle_hand_follow(self, req):
+        # TODO check if we are in a good position, otherwise go to home with current waist angle
+        self.enable_smooth_follow = req.data
+        return SetBoolResponse(success=self.enable_smooth_follow)  
 
     ### @brief ROS Callback function that recieves ArmJoy messages
     ### @param msg - ArmJoy ROS message
@@ -140,7 +166,7 @@ class ArmRobot(object):
     ### @brief Main control loop to manipulate the arm
     def controller(self):
 
-        if (self.current_torque_status == False): return
+        if (self.current_torque_status == False or not self.enable_smooth_follow): return
 
         with self.hand_mutex:
             msg = copy.deepcopy(self.hand_msg)
