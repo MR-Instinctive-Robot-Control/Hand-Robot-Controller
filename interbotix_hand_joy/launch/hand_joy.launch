@@ -46,4 +46,11 @@
     <param name="robot_model" value="$(arg robot_model)"/>
   </node>
 
+  <node
+    pkg="cube_tracking"
+    type="publisher_cube_position.py"
+    name="publisher_cube_position"
+    output="screen">
+  </node>
+
 </launch>
