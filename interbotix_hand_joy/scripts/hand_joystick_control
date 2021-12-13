@@ -5,7 +5,7 @@ import rospy
 import threading
 import numpy as np
 from interbotix_hand_joy.srv import GripperPosition, GripperPositionResponse, \
-    SetJointAngles, SetJointAnglesResponse
+    SetWaistAngle, SetWaistAngleResponse
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Bool
 from std_srvs.srv import Trigger, TriggerResponse, SetBool, SetBoolResponse
@@ -51,7 +51,7 @@ class ArmRobot(object):
         rospy.Service('commands/go_home', Trigger, self.handle_go_home)
         rospy.Service('commands/go_sleep', Trigger, self.handle_sleep)
         rospy.Service('commands/toggle_hand_follow', SetBool, self.handle_toggle_hand_follow)
-        rospy.Service('commands/set_joint_angles', SetJointAngles, self.handle_set_joint_angles)
+        rospy.Service('commands/set_waist_angle', SetWaistAngle, self.handle_set_waist_angle)
         self.pub_feasible = rospy.Publisher("feedback/hand_pose_feasible", Bool, queue_size=1)
 
     ### @brief Helper function that updates the frequency at which the main control loop runs
@@ -94,27 +94,41 @@ class ArmRobot(object):
 
     # handles service call, returns true once the arm is in sleep position
     def handle_sleep(self, req):
+        prev_commands = self.armbot.arm.get_joint_commands()
+        self.armbot.arm.set_trajectory_time(1.5, 0.75)
+        # check if we have large waist angle
+        if (prev_commands != [] and prev_commands[0] > 0.1):
+            self.waist_angle = 0.0
+            self.armbot.arm.set_single_joint_position('waist', self.waist_angle, 1.5, 0.7)
         self.armbot.arm.go_to_sleep_pose(1.5, 0.75)
         self.update_T_yb()
         self.armbot.arm.set_trajectory_time(0.2, 0.1)
         return TriggerResponse(success=True) 
 
-    # handles service call, returns true once the arm is in home position
-    def handle_go_home(self, req):
-        home_position = [0.0, 0.4, 0.4, 0.0, -0.8, 0.0]
+    def go_home(self):
+        home_position = [self.waist_angle, 0.4, 0.4, 0.0, -0.8, 0.0]
         self.armbot.arm.set_trajectory_time(1.5, 0.75)
         self.armbot.arm.set_joint_positions(home_position, 1.5, 0.75)
         self.update_T_yb()
         self.armbot.arm.set_trajectory_time(0.2, 0.1)
+        return True
+
+    # handles service call, returns true once the arm is in home position
+    def handle_go_home(self, req):
+        self.go_home()
         return TriggerResponse(success=True)  
-        
-    def handle_set_joint_angles(self, req):
-        joint_angles = req.joint_angles
-        self.armbot.arm.set_trajectory_time(1.5, 0.75)
-        self.armbot.arm.set_joint_positions(joint_angles, 1.5, 0.75)
-        self.update_T_yb()
-        self.armbot.arm.set_trajectory_time(0.2, 0.1)
-        return SetJointAnglesResponse(success=True)  
+
+    # handles service call, returns true once the arm is in new home position
+    def handle_set_waist_angle(self, req):
+        # check that the last joint commands were not None (aka we didn't send any) or close to sleep
+        prev_commands = self.armbot.arm.get_joint_commands()
+        sleep_pos = list(self.armbot.arm.group_info.joint_sleep_positions)
+        if (prev_commands == [] or np.sum(abs(np.array(prev_commands) - np.array(sleep_pos))) < 0.1):
+            self.waist_angle = 0.0
+            self.go_home()
+        self.waist_angle = req.waist_angle
+        self.go_home()
+        return SetWaistAngleResponse(success=True)  
 
     # handles service call, sets the bool that enables hand following and return whatever the bool is set to
     def handle_toggle_hand_follow(self, req):
