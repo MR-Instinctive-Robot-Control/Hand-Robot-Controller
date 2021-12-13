@@ -38,6 +38,7 @@ class ArmRobot(object):
         robot_name = rospy.get_namespace().strip("/")
         self.armbot = InterbotixManipulatorXS(robot_model, robot_name=robot_name, moving_time=0.2, accel_time=0.1, init_node=False)
         self.num_joints = self.armbot.arm.group_info.num_joints
+        self.waist_angle = 0.0;
         self.waist_index = self.armbot.arm.group_info.joint_names.index("waist")
         self.waist_ll = self.armbot.arm.group_info.joint_lower_limits[self.waist_index]
         self.waist_ul = self.armbot.arm.group_info.joint_upper_limits[self.waist_index]
