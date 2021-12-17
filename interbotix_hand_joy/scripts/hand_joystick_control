@@ -98,7 +98,7 @@ class ArmRobot(object):
         prev_commands = self.armbot.arm.get_joint_commands()
         self.armbot.arm.set_trajectory_time(1.5, 0.75)
         # check if we have large waist angle
-        if (prev_commands != [] and prev_commands[0] > 0.1):
+        if (prev_commands != [] and prev_commands[0] > 0.05):
             self.waist_angle = 0.0
             self.armbot.arm.set_single_joint_position('waist', self.waist_angle, 1.5, 0.7)
         self.armbot.arm.go_to_sleep_pose(1.5, 0.75)
@@ -126,6 +126,9 @@ class ArmRobot(object):
         sleep_pos = list(self.armbot.arm.group_info.joint_sleep_positions)
         if (prev_commands == [] or np.sum(abs(np.array(prev_commands) - np.array(sleep_pos))) < 0.1):
             self.waist_angle = 0.0
+            self.go_home()
+        if (abs(self.waist_angle - req.waist_angle) > 3.14):
+            self.waist_angle += (req.waist_angle - self.waist_angle)/2
             self.go_home()
         self.waist_angle = req.waist_angle
         self.go_home()
