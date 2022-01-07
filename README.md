@@ -13,3 +13,7 @@ This repository contains the setup instructions and the ROS controller for inter
 1. [Unity Project](https://gitlab.ethz.ch/mr-instinctive-robot/unity-project)
 2. [Cube Tracking Ros Package](https://gitlab.ethz.ch/mr-instinctive-robot/cube_tracking_rospkg)
 3. [Setup Scripts](https://gitlab.ethz.ch/mr-instinctive-robot/unity_ros_setup)
+
+## Questions / Issues
+
+For Questions or Issues with any of the packages, make an issue in this repository or [contact](mailto:jonbecke@student.ethz.ch) a team member directly. 
