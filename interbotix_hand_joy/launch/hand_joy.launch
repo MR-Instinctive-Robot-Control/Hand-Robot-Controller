@@ -17,26 +17,6 @@
     <arg name="use_sim"                           value="$(arg use_sim)"/>
   </include>
 
-  <!-- <node
-    pkg="joy"
-    type="joy_node"
-    name="joy_node"
-    output="screen"
-    ns="$(arg robot_name)">
-    <param name="dev" value="/dev/input/js0" />
-    <remap from="joy" to="commands/joy_raw"/>
-  </node> -->
-
-  <!-- <node
-    pkg="interbotix_hand_joy"
-    type="xsarm_joy"
-    name="xsarm_joy"
-    output="screen"
-    ns="$(arg robot_name)">
-    <param name="threshold" value="$(arg threshold)"/>
-    <param name="controller" value="$(arg controller)"/>
-  </node> -->
-
   <node
     pkg="interbotix_hand_joy"
     type="hand_joystick_control"
@@ -45,12 +25,14 @@
     ns="$(arg robot_name)">
     <param name="robot_model" value="$(arg robot_model)"/>
   </node>
-
-  <node
-    pkg="cube_tracking"
-    type="publisher_cube_position.py"
-    name="publisher_cube_position"
-    output="screen">
-  </node>
+  
+  <group unless="$(arg use_sim)">
+    <node
+      pkg="cube_tracking"
+      type="publisher_cube_position.py"
+      name="publisher_cube_position"
+      output="screen">
+    </node>
+  </group>
 
 </launch>
