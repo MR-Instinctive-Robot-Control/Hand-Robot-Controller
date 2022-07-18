@@ -2,6 +2,10 @@
 
 An interactive MR application allowing HoloLens2 users to teleoperate a robotic arm (Interbotix Wx250s) without direct line of sight to achieve basic assembly tasks. Written in  C#, Unity and ROS.
 
+## Preview Video:
+
+[![Preview Video](https://img.youtube.com/vi/YiZyG_5g66w/maxresdefault.jpg)](http://www.youtube.com/watch?v=YiZyG_5g66w "Remote Control a Robotic Arm using Only Your Hands (HoloLens 2)")
+
 ## Getting Started
 
 For setup instructions and a guide for running the code refer to the [wiki](https://github.com/MR-Instinctive-Robot-Control/Hand-Robot-Controller/wiki).
